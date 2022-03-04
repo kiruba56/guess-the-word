@@ -67,6 +67,9 @@ interface ExersiceState {
     };
 
     _validate = () => {
+        if(!this._selected_){
+            return;
+        }
         if(['right_answer','wrong_answer'].includes(this.state.btn_state)){
             return this._next();
         };
