@@ -1,44 +1,51 @@
 import React, { useState } from 'react';
 import {View,StyleSheet, Text} from 'react-native';
+import Animated, { FadeInDown, CurvedTransition, FadeOutUp, Layout } from 'react-native-reanimated';
 import colors from '../theme/colors';
 import default_styles from '../theme/default_styles';
+import { word } from '../types/word';
 import { hp, wp } from '../utils/responsive';
+import Bouncy from './bouncy';
 
-interface word {
-    en:string
-    de:string
-};
+
+const reactive_states = ['right_answer','wrong_answer'];
 
 interface Props {
-    sentence:word[],
-    answer:number,
+    sentence:word[]
+    answer:number
     options:string[]
+    btn_state:'disabled'|'active'|'right_answer'|'wrong_answer'
+    onOptionSelected?(selected:string|undefined):void
 }
 
-const Question:React.FC<Props> = ({sentence=[], answer,options=[]}) => {
+const Question:React.FC<Props> = React.memo(({sentence=[], answer=0,onOptionSelected,options=[],btn_state}) => {
 
     const [selected,set_selected] = useState<word|undefined>();
-
     const _render_words_ = (x:word,i:number) => {
-        if(answer===i){
-            return <SelectedWord {...selected}/>
+        if(i===answer){
+            return <SelectedWord btn_state={btn_state} key={`selected_word_${selected?.de}`} {...selected}/>
         };
         return (
             <Word {...x} key={x.de}/>
         )
     };
 
+    const onSelect = (title:string):void => {
+        if(title===selected?.de){
+            onOptionSelected&&onOptionSelected(undefined);
+            set_selected(undefined);
+        }else{
+            onOptionSelected&&onOptionSelected(title);
+            set_selected({de:title,en:""});
+        }
+    };
+
     const _render_options =(x:string,i:number) => (
-        <View style={{
-            width:'50%',
-            justifyContent:'flex-end'
-        }}>
-            <Option selected={selected?.de===x} title={x} key={x} index={i}/>
-        </View>
+                <Option key={x} onSelect={onSelect} selected={selected?.de===x} title={x}  index={i}/>
     )
 
     return (
-        <View style={styles.container}> 
+        <View pointerEvents={reactive_states.includes(btn_state)?'none':'auto'} style={styles.container}> 
             <View style={[default_styles.row,styles.text_container]}>
                 {sentence.map(_render_words_)}
             </View>
@@ -47,42 +54,60 @@ const Question:React.FC<Props> = ({sentence=[], answer,options=[]}) => {
             </View>
         </View>
     )
-};
+});
 
 interface SelectedWordProps {
     en?:string
-    de?:string
+    de?:string,
+    btn_state:'disabled'|'active'|'right_answer'|'wrong_answer'
 };
 
 
 interface OptionProps {
     title:string,
     selected:boolean
-    index:number
+    index:number,
+    onSelect?(title:string):void
 }
 
-const Option:React.FC<OptionProps> = React.memo(({title,index,selected}) => {
+const Option:React.FC<OptionProps> = React.memo(({title,index,selected,onSelect}) => {
+
+    const onPress = () => onSelect&&onSelect(title);
+
     return (
-        <View style={[styles.selected,styles.option,!selected&&styles.shadow,{alignSelf:index%2==1?'flex-start':'flex-end',backgroundColor:selected?colors.gray:colors.white}]}>
-            <Text style={[styles.selected_text,{color:selected?colors.gray:colors.container}]}>{title}</Text>
-        </View>
+        <Animated.View layout={CurvedTransition} style={styles.option_cover}>
+            <Bouncy onPress={onPress} bounce={0.98}>
+                <View style={[styles.selected,styles.option,!selected&&styles.shadow,{alignSelf:index%2==1?'flex-start':'flex-end',backgroundColor:selected?colors.gray:colors.white}]}>
+                    <Text style={[styles.selected_text,{color:selected?colors.gray:colors.container}]}>{title}</Text>
+                </View>
+            </Bouncy>
+        </Animated.View>
     )
 },(p,n)=>p.selected===n.selected);
 
-const SelectedWord:React.FC<SelectedWordProps> = ({en,de}) => {
+
+// change the bg of selected answer based on right or wrong
+const get_color_by_states = (state:string):string => {
+    if(state==='right_answer'){
+        return colors.positive
+    };
+    return colors.negative;
+};
+
+const SelectedWord:React.FC<SelectedWordProps> = ({en,de,btn_state}) => {
     return (
         <>
-            {!de&&<View style={[styles.space_fill,styles.margin]}/>}
-            {de&&<View style={[styles.selected,styles.shadow]}>
-                    <Text style={styles.selected_text}>{de}</Text>
-                </View>}
+            {!de&&<Animated.View entering={FadeInDown} exiting={FadeOutUp} layout={Layout}  style={[styles.space_fill,styles.margin]}/>}
+            {de&&<Animated.View entering={FadeInDown.delay(200)} exiting={FadeOutUp} style={[styles.selected,styles.shadow,reactive_states.includes(btn_state)&&{backgroundColor:get_color_by_states(btn_state)}]}>
+                    <Text style={[styles.selected_text,reactive_states.includes(btn_state)&&{color:colors.white}]}>{de}</Text>
+                </Animated.View>}
         </>
     )
 };
 
 const Word:React.FC<word> = React.memo(({de}) => {
     return (
-        <Text style={[styles.text,styles.margin]}>{de}</Text>
+        <Animated.Text layout={Layout} style={[styles.text,styles.margin]}>{de}</Animated.Text>
     )
 });
 
@@ -92,6 +117,10 @@ export default Question;
 const styles = StyleSheet.create({
     container:{
         marginTop:hp(3)
+    },
+    option_cover:{
+        width:'50%',
+        justifyContent:'flex-end'
     },
     text_container:{
         alignSelf:'center',

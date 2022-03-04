@@ -8,7 +8,7 @@ interface Props {
     sentence: string[];
     highlighted:number,
 }
-const Example: React.FC<Props>  = ({sentence=[],highlighted}) => {
+const Example: React.FC<Props>  = React.memo(({sentence=[],highlighted}) => {
     const total = sentence.length-1;
     const _render_words_ = (x:string,i:number) => <Text style={[styles.text,highlighted===i&&styles.text_higlighted]} key={x}>{x}{i!==total?' ':null}</Text>
     return (
@@ -16,7 +16,7 @@ const Example: React.FC<Props>  = ({sentence=[],highlighted}) => {
             {sentence.map(_render_words_)}
         </View>
     );
-};
+});
 
 export default Example;
 
