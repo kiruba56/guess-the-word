@@ -107,7 +107,7 @@ const SelectedWord:React.FC<SelectedWordProps> = ({en,de,btn_state}) => {
 
 const Word:React.FC<word> = React.memo(({de}) => {
     return (
-        <Animated.Text layout={Layout} style={[styles.text,styles.margin]}>{de}</Animated.Text>
+        <Animated.Text layout={Layout.delay(100)} style={[styles.text,styles.margin]}>{de}</Animated.Text>
     )
 });
 
